@@ -3,10 +3,357 @@ const STORAGE_KEY = 'reading_notes';
 let currentCoverImage = '';
 let currentNoteId = null;
 
+// 书籍推荐数据库
+const BOOK_RECOMMENDATIONS = [
+    {
+        id: 'rec1',
+        title: '活着',
+        author: '余华',
+        category: '文学',
+        tags: ['人生', '苦难', '坚韧', '生命', '感动'],
+        description: '一个人一生的故事，讲述人如何去承受巨大的苦难。',
+        cover: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&q=80'
+    },
+    {
+        id: 'rec2',
+        title: '百年孤独',
+        author: '加西亚·马尔克斯',
+        category: '文学',
+        tags: ['魔幻现实主义', '家族', '孤独', '命运', '经典'],
+        description: '布恩迪亚家族七代人的传奇故事，魔幻现实主义文学代表作。',
+        cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&q=80'
+    },
+    {
+        id: 'rec3',
+        title: '人类简史',
+        author: '尤瓦尔·赫拉利',
+        category: '历史',
+        tags: ['历史', '人类', '进化', '认知', '未来'],
+        description: '从认知革命到科学革命，重新审视人类历史。',
+        cover: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=300&q=80'
+    },
+    {
+        id: 'rec4',
+        title: '三体',
+        author: '刘慈欣',
+        category: '科幻',
+        tags: ['科幻', '宇宙', '文明', '未来', '探索'],
+        description: '中国科幻巅峰之作，讲述人类文明与三体文明的博弈。',
+        cover: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=80'
+    },
+    {
+        id: 'rec5',
+        title: '小王子',
+        author: '圣埃克苏佩里',
+        category: '童话',
+        tags: ['成长', '爱', '纯真', '哲理', '经典'],
+        description: '献给长成了大人的孩子们，关于爱与责任的寓言。',
+        cover: 'https://images.unsplash.com/photo-1633477189729-9290b3261d0a?w=300&q=80'
+    },
+    {
+        id: 'rec6',
+        title: '月亮与六便士',
+        author: '毛姆',
+        category: '文学',
+        tags: ['艺术', '理想', '人生', '选择', '追求'],
+        description: '一个证券经纪人突然抛弃一切去追寻绘画理想的故事。',
+        cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&q=80'
+    },
+    {
+        id: 'rec7',
+        title: '沉默的大多数',
+        author: '王小波',
+        category: '散文',
+        tags: ['思考', '批判', '自由', '理性', '杂文'],
+        description: '王小波杂文代表作，用幽默的笔触剖析社会现象。',
+        cover: 'https://images.unsplash.com/photo-1476275466078-4007374efbbe?w=300&q=80'
+    },
+    {
+        id: 'rec8',
+        title: '围城',
+        author: '钱钟书',
+        category: '文学',
+        tags: ['讽刺', '婚姻', '知识', '社会', '经典'],
+        description: '城外的人想进去，城里的人想出来，人生处处是围城。',
+        cover: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&q=80'
+    },
+    {
+        id: 'rec9',
+        title: '挪威的森林',
+        author: '村上春树',
+        category: '文学',
+        tags: ['青春', '爱情', '成长', '孤独', '治愈'],
+        description: '一部动人心弦的、平缓舒雅的、略带感伤的恋爱小说。',
+        cover: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300&q=80'
+    },
+    {
+        id: 'rec10',
+        title: '平凡的世界',
+        author: '路遥',
+        category: '文学',
+        tags: ['奋斗', '人生', '时代', '励志', '现实主义'],
+        description: '展示了普通人在大时代历史进程中所走过的艰难曲折的道路。',
+        cover: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&q=80'
+    },
+    {
+        id: 'rec11',
+        title: '霍乱时期的爱情',
+        author: '加西亚·马尔克斯',
+        category: '文学',
+        tags: ['爱情', '等待', '生命', '执着', '时间'],
+        description: '一段跨越半个多世纪的爱情史诗，穷尽了爱情的所有可能性。',
+        cover: 'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=300&q=80'
+    },
+    {
+        id: 'rec12',
+        title: '局外人',
+        author: '加缪',
+        category: '哲学',
+        tags: ['存在主义', '荒诞', '冷漠', '社会', '哲学'],
+        description: '荒诞哲学的代表作，揭示人在异己的世界中的孤独。',
+        cover: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=300&q=80'
+    },
+    {
+        id: 'rec13',
+        title: '追风筝的人',
+        author: '卡勒德·胡赛尼',
+        category: '文学',
+        tags: ['救赎', '友谊', '背叛', '成长', '阿富汗'],
+        description: '为你，千千万万遍，一个关于背叛与救赎的感人故事。',
+        cover: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=300&q=80'
+    },
+    {
+        id: 'rec14',
+        title: '白夜行',
+        author: '东野圭吾',
+        category: '悬疑',
+        tags: ['推理', '人性', '黑暗', '爱情', '悬疑'],
+        description: '只希望能手牵手在太阳下散步，这个象征故事内核的绝望念想。',
+        cover: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=300&q=80'
+    },
+    {
+        id: 'rec15',
+        title: '解忧杂货店',
+        author: '东野圭吾',
+        category: '治愈',
+        tags: ['温暖', '治愈', '选择', '人生', '温情'],
+        description: '僻静街道旁的一家杂货店，只要写下烦恼投进卷帘门的投信口。',
+        cover: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=300&q=80'
+    },
+    {
+        id: 'rec16',
+        title: '万历十五年',
+        author: '黄仁宇',
+        category: '历史',
+        tags: ['历史', '明朝', '大历史观', '制度', '中国'],
+        description: '从小事件看大历史，揭示中国传统社会的问题。',
+        cover: 'https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=300&q=80'
+    },
+    {
+        id: 'rec17',
+        title: '杀死一只知更鸟',
+        author: '哈珀·李',
+        category: '文学',
+        tags: ['正义', '种族', '成长', '教育', '勇气'],
+        description: '关于勇气、正义与成长的永恒经典。',
+        cover: 'https://images.unsplash.com/photo-1440778303588-43aa9d7818ad?w=300&q=80'
+    },
+    {
+        id: 'rec18',
+        title: '苏菲的世界',
+        author: '乔斯坦·贾德',
+        category: '哲学',
+        tags: ['哲学', '启蒙', '思考', '智慧', '入门'],
+        description: '以小说的形式，通过一名哲学导师向一个叫苏菲的女孩传授哲学知识。',
+        cover: 'https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?w=300&q=80'
+    },
+    {
+        id: 'rec19',
+        title: '了不起的盖茨比',
+        author: '菲茨杰拉德',
+        category: '文学',
+        tags: ['美国梦', '爱情', '奢华', '悲剧', '爵士时代'],
+        description: '美国文学史上的经典，关于梦想、财富与爱情的悲剧。',
+        cover: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=300&q=80'
+    },
+    {
+        id: 'rec20',
+        title: '沉思录',
+        author: '马可·奥勒留',
+        category: '哲学',
+        tags: ['斯多葛', '人生', '智慧', '内省', '罗马'],
+        description: '古罗马皇帝的人生哲学，关于如何过一种符合理性的生活。',
+        cover: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=300&q=80'
+    },
+    {
+        id: 'rec21',
+        title: '红楼梦',
+        author: '曹雪芹',
+        category: '古典',
+        tags: ['古典', '爱情', '家族', '诗词', '经典'],
+        description: '中国古典小说巅峰，封建社会的百科全书。',
+        cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&q=80'
+    },
+    {
+        id: 'rec22',
+        title: '老人与海',
+        author: '海明威',
+        category: '文学',
+        tags: ['坚持', '勇气', '自然', '硬汉', '诺贝尔文学奖'],
+        description: '人可以被毁灭，但不能被打败，关于勇气与坚持的永恒故事。',
+        cover: 'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=300&q=80'
+    },
+    {
+        id: 'rec23',
+        title: '瓦尔登湖',
+        author: '梭罗',
+        category: '散文',
+        tags: ['自然', '简单', '生活', '哲学', '独处'],
+        description: '在瓦尔登湖畔的独居生活，关于简单生活与自然的思考。',
+        cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&q=80'
+    },
+    {
+        id: 'rec24',
+        title: '乔布斯传',
+        author: '沃尔特·艾萨克森',
+        category: '传记',
+        tags: ['创新', '领导力', '苹果', '科技', '传记'],
+        description: '苹果公司创始人的官方传记，关于创新与完美主义的故事。',
+        cover: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=300&q=80'
+    },
+    {
+        id: 'rec25',
+        title: '自控力',
+        author: '凯利·麦格尼格尔',
+        category: '心理学',
+        tags: ['自律', '习惯', '意志力', '改变', '科学'],
+        description: '斯坦福大学最受欢迎的心理学课程，教你如何管理自控力。',
+        cover: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=300&q=80'
+    }
+];
+
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
     loadNotes();
+    generateRecommendations();
 });
+
+// 生成推荐
+function generateRecommendations() {
+    const notes = getNotes();
+    const recommendationSection = document.getElementById('recommendation-section');
+    
+    if (!recommendationSection) return;
+    
+    if (notes.length === 0) {
+        recommendationSection.style.display = 'none';
+        return;
+    }
+    
+    recommendationSection.style.display = 'block';
+    
+    // 分析用户的阅读偏好
+    const userPreferences = analyzeUserPreferences(notes);
+    
+    // 获取推荐书籍
+    const recommendations = getBookRecommendations(userPreferences, notes);
+    
+    // 渲染推荐
+    renderRecommendations(recommendations);
+}
+
+// 分析用户阅读偏好
+function analyzeUserPreferences(notes) {
+    const preferences = {
+        authors: {},
+        tags: {},
+        categories: {}
+    };
+    
+    notes.forEach(note => {
+        // 分析作者
+        if (note.author && note.author !== '未知作者') {
+            preferences.authors[note.author] = (preferences.authors[note.author] || 0) + 1;
+        }
+        
+        // 分析笔记内容中的关键词
+        const content = stripHtml(note.content).toLowerCase();
+        const keywords = [
+            '人生', '成长', '爱情', '哲学', '历史', '科幻', '文学', '艺术',
+            '孤独', '梦想', '自由', '思考', '现实', '未来', '自然', '治愈',
+            '勇气', '坚持', '智慧', '真理', '探索', '生命', '命运', '社会'
+        ];
+        
+        keywords.forEach(keyword => {
+            if (content.includes(keyword)) {
+                preferences.tags[keyword] = (preferences.tags[keyword] || 0) + 1;
+            }
+        });
+    });
+    
+    return preferences;
+}
+
+// 获取推荐书籍
+function getBookRecommendations(preferences, userNotes) {
+    const userBookTitles = userNotes.map(n => n.title.toLowerCase());
+    
+    // 计算每本书的推荐分数
+    const scoredBooks = BOOK_RECOMMENDATIONS.map(book => {
+        let score = 0;
+        
+        // 根据作者偏好加分
+        if (preferences.authors[book.author]) {
+            score += preferences.authors[book.author] * 3;
+        }
+        
+        // 根据标签匹配加分
+        book.tags.forEach(tag => {
+            if (preferences.tags[tag]) {
+                score += preferences.tags[tag] * 2;
+            }
+        });
+        
+        // 随机因子（让推荐更多样化）
+        score += Math.random() * 2;
+        
+        return { ...book, score };
+    });
+    
+    // 过滤掉用户已经读过的书，按分数排序，取前4本
+    return scoredBooks
+        .filter(book => !userBookTitles.includes(book.title.toLowerCase()))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 4);
+}
+
+// 渲染推荐
+function renderRecommendations(recommendations) {
+    const container = document.getElementById('recommendation-list');
+    
+    if (!container) return;
+    
+    if (recommendations.length === 0) {
+        container.innerHTML = '<p class="no-recommendations">暂无推荐，多写几篇笔记后就能获得个性化推荐啦！</p>';
+        return;
+    }
+    
+    container.innerHTML = recommendations.map(book => `
+        <div class="recommendation-card">
+            <div class="rec-cover" style="background-image: url('${book.cover}')">
+                <span class="rec-category">${book.category}</span>
+            </div>
+            <div class="rec-content">
+                <h4 class="rec-title">${escapeHtml(book.title)}</h4>
+                <p class="rec-author">${escapeHtml(book.author)}</p>
+                <p class="rec-description">${escapeHtml(book.description)}</p>
+                <div class="rec-tags">
+                    ${book.tags.slice(0, 3).map(tag => `<span class="rec-tag">${tag}</span>`).join('')}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
 
 // 加载笔记列表
 function loadNotes() {
@@ -113,6 +460,10 @@ function saveNote() {
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
     loadNotes();
+    
+    // 保存后重新生成推荐
+    generateRecommendations();
+    
     closeEditor();
     
     alert('笔记保存成功！');
@@ -163,6 +514,10 @@ function deleteCurrentNote() {
     const notes = getNotes().filter(n => n.id !== currentNoteId);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
     loadNotes();
+    
+    // 删除后重新生成推荐
+    generateRecommendations();
+    
     closeDetail();
     
     alert('笔记已删除');
