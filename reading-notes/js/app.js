@@ -1,0 +1,269 @@
+// 数据存储键
+const STORAGE_KEY = 'reading_notes';
+let currentCoverImage = '';
+let currentNoteId = null;
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    loadNotes();
+});
+
+// 加载笔记列表
+function loadNotes() {
+    const notes = getNotes();
+    const notesList = document.getElementById('notes-list');
+    const emptyState = document.getElementById('empty-state');
+    
+    if (notes.length === 0) {
+        notesList.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    notesList.innerHTML = notes.map(note => createNoteCard(note)).join('');
+}
+
+// 获取所有笔记
+function getNotes() {
+    const notes = localStorage.getItem(STORAGE_KEY);
+    return notes ? JSON.parse(notes) : [];
+}
+
+// 创建笔记卡片 HTML
+function createNoteCard(note) {
+    const excerpt = stripHtml(note.content).substring(0, 100) + '...';
+    const coverStyle = note.cover ? `background-image: url('${note.cover}')` : '';
+    const date = new Date(note.createdAt).toLocaleDateString('zh-CN');
+    
+    return `
+        <div class="note-card" onclick="showDetail('${note.id}')">
+            <div class="note-cover" style="${coverStyle}"></div>
+            <div class="note-content">
+                <h3 class="note-title">${escapeHtml(note.title)}</h3>
+                <p class="note-author">作者: ${escapeHtml(note.author)}</p>
+                <p class="note-excerpt">${escapeHtml(excerpt)}</p>
+                <p class="note-date">${date}</p>
+            </div>
+        </div>
+    `;
+}
+
+// 显示编辑器
+function showEditor() {
+    currentNoteId = null;
+    currentCoverImage = '';
+    document.getElementById('book-title').value = '';
+    document.getElementById('book-author').value = '';
+    document.getElementById('editor').innerHTML = '';
+    document.getElementById('cover-preview').style.backgroundImage = '';
+    document.getElementById('cover-preview').classList.remove('has-image');
+    document.getElementById('editor-modal').style.display = 'flex';
+}
+
+// 关闭编辑器
+function closeEditor() {
+    document.getElementById('editor-modal').style.display = 'none';
+    currentCoverImage = '';
+    currentNoteId = null;
+}
+
+// 保存笔记
+function saveNote() {
+    const title = document.getElementById('book-title').value.trim();
+    const author = document.getElementById('book-author').value.trim();
+    const content = document.getElementById('editor').innerHTML;
+    
+    if (!title) {
+        alert('请输入书名');
+        return;
+    }
+    
+    if (!content.trim()) {
+        alert('请输入笔记内容');
+        return;
+    }
+    
+    const note = {
+        id: currentNoteId || Date.now().toString(),
+        title: title,
+        author: author || '未知作者',
+        content: content,
+        cover: currentCoverImage,
+        createdAt: currentNoteId ? getNoteById(currentNoteId).createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    
+    const notes = getNotes();
+    
+    if (currentNoteId) {
+        const index = notes.findIndex(n => n.id === currentNoteId);
+        if (index !== -1) {
+            notes[index] = note;
+        }
+    } else {
+        notes.unshift(note);
+    }
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    loadNotes();
+    closeEditor();
+    
+    alert('笔记保存成功！');
+}
+
+// 显示笔记详情
+function showDetail(id) {
+    const note = getNoteById(id);
+    if (!note) return;
+    
+    currentNoteId = id;
+    
+    document.getElementById('detail-title').textContent = note.title;
+    document.getElementById('detail-author').textContent = note.author;
+    document.getElementById('detail-date').textContent = new Date(note.createdAt).toLocaleDateString('zh-CN');
+    document.getElementById('detail-content').innerHTML = note.content;
+    
+    const coverContainer = document.getElementById('detail-cover');
+    if (note.cover) {
+        coverContainer.innerHTML = `<img src="${note.cover}" alt="${note.title}">`;
+    } else {
+        coverContainer.innerHTML = '';
+    }
+    
+    document.getElementById('detail-modal').style.display = 'flex';
+}
+
+// 关闭详情页
+function closeDetail() {
+    document.getElementById('detail-modal').style.display = 'none';
+    currentNoteId = null;
+}
+
+// 删除当前笔记
+function deleteCurrentNote() {
+    if (!currentNoteId) return;
+    
+    if (!confirm('确定要删除这条笔记吗？此操作不可撤销。')) {
+        return;
+    }
+    
+    const notes = getNotes().filter(n => n.id !== currentNoteId);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    loadNotes();
+    closeDetail();
+    
+    alert('笔记已删除');
+}
+
+// 根据 ID 获取笔记
+function getNoteById(id) {
+    return getNotes().find(n => n.id === id);
+}
+
+// 格式化文本
+function formatText(command) {
+    document.execCommand(command, false, null);
+    document.getElementById('editor').focus();
+}
+
+// 处理封面上传
+function handleCoverUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        alert('请上传图片文件');
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        alert('图片大小不能超过 5MB');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        currentCoverImage = e.target.result;
+        const preview = document.getElementById('cover-preview');
+        preview.style.backgroundImage = `url('${currentCoverImage}')`;
+        preview.classList.add('has-image');
+    };
+    reader.readAsDataURL(file);
+}
+
+// 处理内容图片上传
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        alert('请上传图片文件');
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        alert('图片大小不能超过 5MB');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.maxWidth = '100%';
+        
+        const editor = document.getElementById('editor');
+        editor.focus();
+        
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.insertNode(img);
+            range.collapse(false);
+        } else {
+            editor.appendChild(img);
+        }
+        
+        // 添加换行
+        const br = document.createElement('br');
+        editor.appendChild(br);
+    };
+    reader.readAsDataURL(file);
+    
+    // 清空 input 以便可以再次选择同一文件
+    event.target.value = '';
+}
+
+// 工具函数：去除 HTML 标签
+function stripHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+}
+
+// 工具函数：转义 HTML 特殊字符
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 点击弹窗外部关闭
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        if (event.target.id === 'editor-modal') {
+            closeEditor();
+        } else if (event.target.id === 'detail-modal') {
+            closeDetail();
+        }
+    }
+};
+
+// 键盘快捷键
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditor();
+        closeDetail();
+    }
+});
