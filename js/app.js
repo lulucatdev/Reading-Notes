@@ -225,6 +225,33 @@ const BOOK_RECOMMENDATIONS = [
         tags: ['科幻', '宇宙', '文明', '未来', '探索'],
         description: '中国科幻巅峰之作，讲述人类文明与三体文明的博弈。',
         cover: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=80'
+    },
+    {
+        id: 'rec4',
+        title: '小王子',
+        author: '圣埃克苏佩里',
+        category: '童话',
+        tags: ['成长', '爱', '纯真', '哲理', '经典'],
+        description: '献给长成了大人的孩子们，关于爱与责任的寓言。',
+        cover: 'https://images.unsplash.com/photo-1633477189729-9290b3261d0a?w=300&q=80'
+    },
+    {
+        id: 'rec5',
+        title: '围城',
+        author: '钱钟书',
+        category: '文学',
+        tags: ['讽刺', '婚姻', '知识', '社会', '经典'],
+        description: '城外的人想进去，城里的人想出来，人生处处是围城。',
+        cover: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&q=80'
+    },
+    {
+        id: 'rec6',
+        title: '人类简史',
+        author: '尤瓦尔·赫拉利',
+        category: '历史',
+        tags: ['历史', '人类', '进化', '认知', '未来'],
+        description: '从认知革命到科学革命，重新审视人类历史。',
+        cover: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=300&q=80'
     }
 ];
 
