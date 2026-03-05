@@ -229,6 +229,189 @@ const BOOK_RECOMMENDATIONS = [
         tags: ['自律', '习惯', '意志力', '改变', '科学'],
         description: '斯坦福大学最受欢迎的心理学课程，教你如何管理自控力。',
         cover: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=300&q=80'
+    },
+    // ========== 中外文学 ==========
+    {
+        id: 'rec26',
+        title: '白鹿原',
+        author: '陈忠实',
+        category: '文学',
+        tags: ['家族', '历史', '乡土', '史诗', '中国'],
+        description: '一部渭河平原五十年变迁的雄奇史诗，一轴中国农村斑斓多彩的画卷。',
+        cover: 'https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=300&q=80'
+    },
+    {
+        id: 'rec27',
+        title: '边城',
+        author: '沈从文',
+        category: '文学',
+        tags: ['湘西', '爱情', '纯朴', '人性', '田园'],
+        description: '一曲湘西牧歌，描绘了湘西地区特有的风土人情和纯真的爱情故事。',
+        cover: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=300&q=80'
+    },
+    {
+        id: 'rec28',
+        title: '骆驼祥子',
+        author: '老舍',
+        category: '文学',
+        tags: ['北京', '命运', '底层', '社会', '悲剧'],
+        description: '讲述人力车夫祥子三起三落的人生经历，展现旧北京底层人民的苦难生活。',
+        cover: 'https://images.unsplash.com/photo-1533669955142-6a73332af4db?w=300&q=80'
+    },
+    {
+        id: 'rec29',
+        title: '傲慢与偏见',
+        author: '简·奥斯汀',
+        category: '文学',
+        tags: ['爱情', '婚姻', '阶级', '英国', '经典'],
+        description: '19世纪英国乡绅阶层的生活画卷，关于爱情与婚姻的永恒经典。',
+        cover: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&q=80'
+    },
+    {
+        id: 'rec30',
+        title: '简爱',
+        author: '夏洛蒂·勃朗特',
+        category: '文学',
+        tags: ['女性', '独立', '爱情', '尊严', '成长'],
+        description: '一个平凡女子追求独立、尊严和真爱的动人故事，女性文学的经典之作。',
+        cover: 'https://images.unsplash.com/photo-1474932430478-367dbb6832c1?w=300&q=80'
+    },
+    {
+        id: 'rec31',
+        title: '红与黑',
+        author: '司汤达',
+        category: '文学',
+        tags: ['野心', '爱情', '社会', '法国', '批判'],
+        description: '一部关于野心与爱情的悲剧，深刻揭示了复辟王朝时期法国的社会矛盾。',
+        cover: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=300&q=80'
+    },
+    {
+        id: 'rec32',
+        title: '巴黎圣母院',
+        author: '雨果',
+        category: '文学',
+        tags: ['爱情', '美丑', '宗教', '法国', '哥特'],
+        description: '在15世纪的巴黎圣母院，上演了一出美与丑、善与恶的永恒悲剧。',
+        cover: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=300&q=80'
+    },
+    // ========== 科技创新 ==========
+    {
+        id: 'rec33',
+        title: '从0到1',
+        author: '彼得·蒂尔',
+        category: '科技创新',
+        tags: ['创业', '创新', '商业', '垄断', '未来'],
+        description: 'PayPal创始人的创业哲学，揭示商业世界的运行法则和创新本质。',
+        cover: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=80'
+    },
+    {
+        id: 'rec34',
+        title: '黑客与画家',
+        author: '保罗·格雷厄姆',
+        category: '科技创新',
+        tags: ['编程', '创业', '硅谷', '思考', '技术'],
+        description: '硅谷创业教父的文集，关于编程、创业、财富与设计的深刻洞见。',
+        cover: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=300&q=80'
+    },
+    {
+        id: 'rec35',
+        title: '浪潮之巅',
+        author: '吴军',
+        category: '科技创新',
+        tags: ['科技', 'IT', '商业', '历史', '趋势'],
+        description: '深度剖析IT产业的发展规律，揭示科技公司的兴衰成败之道。',
+        cover: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&q=80'
+    },
+    {
+        id: 'rec36',
+        title: '未来简史',
+        author: '尤瓦尔·赫拉利',
+        category: '科技创新',
+        tags: ['未来', '科技', '人类', 'AI', '进化'],
+        description: '人类将面临怎样的未来？从智人到智神，探索人类的终极命运。',
+        cover: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=80'
+    },
+    {
+        id: 'rec37',
+        title: '创新者的窘境',
+        author: '克莱顿·克里斯坦森',
+        category: '科技创新',
+        tags: ['创新', '管理', '商业', '颠覆', '战略'],
+        description: '商业管理经典，揭示为什么优秀企业在面对颠覆性创新时会失败。',
+        cover: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&q=80'
+    },
+    {
+        id: 'rec38',
+        title: '奇点临近',
+        author: '雷·库兹韦尔',
+        category: '科技创新',
+        tags: ['AI', '未来', '技术', '人类', '预测'],
+        description: '探讨人工智能超越人类智能的未来，科技奇点的到来意味着什么。',
+        cover: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=300&q=80'
+    },
+    // ========== 金融相关 ==========
+    {
+        id: 'rec39',
+        title: '穷爸爸富爸爸',
+        author: '罗伯特·清崎',
+        category: '金融',
+        tags: ['理财', '财商', '投资', '思维', '财富'],
+        description: '财商教育经典，揭示富人和穷人不同的金钱观和理财思维。',
+        cover: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300&q=80'
+    },
+    {
+        id: 'rec40',
+        title: '原则',
+        author: '瑞·达利欧',
+        category: '金融',
+        tags: ['投资', '管理', '决策', '生活', '原则'],
+        description: '桥水基金创始人的生活和工作原则，关于如何做出更好的决策。',
+        cover: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=300&q=80'
+    },
+    {
+        id: 'rec41',
+        title: '聪明的投资者',
+        author: '本杰明·格雷厄姆',
+        category: '金融',
+        tags: ['投资', '股票', '价值', '理财', '经典'],
+        description: '价值投资圣经，股神巴菲特的老师传授的投资智慧和原则。',
+        cover: 'https://images.unsplash.com/photo-1611974765270-ca1258634369?w=300&q=80'
+    },
+    {
+        id: 'rec42',
+        title: '漫步华尔街',
+        author: '伯顿·马尔基尔',
+        category: '金融',
+        tags: ['投资', '股市', '理财', '策略', '长期'],
+        description: '投资入门的经典教材，指导如何在股市中进行理性投资。',
+        cover: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=300&q=80'
+    },
+    {
+        id: 'rec43',
+        title: '货币战争',
+        author: '宋鸿兵',
+        category: '金融',
+        tags: ['货币', '金融', '历史', '经济', '国际'],
+        description: '揭示国际金融资本的运作规律，探讨货币背后的权力博弈。',
+        cover: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=300&q=80'
+    },
+    {
+        id: 'rec44',
+        title: '小狗钱钱',
+        author: '博多·舍费尔',
+        category: '金融',
+        tags: ['理财', '儿童', '故事', '财商', '入门'],
+        description: '用生动的童话故事讲述理财知识，适合理财入门的读者。',
+        cover: 'https://images.unsplash.com/photo-1535930749574-1399327ce78f?w=300&q=80'
+    },
+    {
+        id: 'rec45',
+        title: '巴菲特致股东的信',
+        author: '沃伦·巴菲特',
+        category: '金融',
+        tags: ['投资', '价值', '股票', '智慧', '长期'],
+        description: '投资大师每年写给股东的信，记录了他50多年的投资智慧。',
+        cover: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=300&q=80'
     }
 ];
 
