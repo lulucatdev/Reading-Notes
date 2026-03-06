@@ -1,10 +1,16 @@
 import type { D1Database } from "@cloudflare/workers-types";
 
+export interface Like {
+  github_id: number;
+  github_login: string;
+}
+
 export interface Note {
   id: number;
   content: string;
   reference: string;
   created_at: string;
+  likes: Like[];
 }
 
 export interface Session {
@@ -16,11 +22,45 @@ export interface Session {
 }
 
 // Notes
+interface NoteRow {
+  id: number;
+  content: string;
+  reference: string;
+  created_at: string;
+}
+
+interface LikeRow {
+  note_id: number;
+  github_id: number;
+  github_login: string;
+}
+
 export async function getNotes(db: D1Database): Promise<Note[]> {
-  const { results } = await db
+  const { results: noteRows } = await db
     .prepare("SELECT * FROM notes ORDER BY created_at DESC")
-    .all<Note>();
-  return results ?? [];
+    .all<NoteRow>();
+
+  const notes = noteRows ?? [];
+  if (notes.length === 0) return [];
+
+  const ids = notes.map((n) => n.id);
+  const placeholders = ids.map(() => "?").join(",");
+  const { results: likeRows } = await db
+    .prepare(`SELECT note_id, github_id, github_login FROM likes WHERE note_id IN (${placeholders})`)
+    .bind(...ids)
+    .all<LikeRow>();
+
+  const likesMap = new Map<number, Like[]>();
+  for (const row of likeRows ?? []) {
+    const arr = likesMap.get(row.note_id) ?? [];
+    arr.push({ github_id: row.github_id, github_login: row.github_login });
+    likesMap.set(row.note_id, arr);
+  }
+
+  return notes.map((n) => ({
+    ...n,
+    likes: likesMap.get(n.id) ?? [],
+  }));
 }
 
 export async function createNote(
@@ -35,7 +75,35 @@ export async function createNote(
 }
 
 export async function deleteNote(db: D1Database, id: number): Promise<void> {
+  await db.prepare("DELETE FROM likes WHERE note_id = ?").bind(id).run();
   await db.prepare("DELETE FROM notes WHERE id = ?").bind(id).run();
+}
+
+// Likes
+export async function toggleLike(
+  db: D1Database,
+  noteId: number,
+  githubId: number,
+  githubLogin: string
+): Promise<boolean> {
+  const existing = await db
+    .prepare("SELECT 1 FROM likes WHERE note_id = ? AND github_id = ?")
+    .bind(noteId, githubId)
+    .first();
+
+  if (existing) {
+    await db
+      .prepare("DELETE FROM likes WHERE note_id = ? AND github_id = ?")
+      .bind(noteId, githubId)
+      .run();
+    return false; // unliked
+  } else {
+    await db
+      .prepare("INSERT INTO likes (note_id, github_id, github_login) VALUES (?, ?, ?)")
+      .bind(noteId, githubId, githubLogin)
+      .run();
+    return true; // liked
+  }
 }
 
 // Sessions

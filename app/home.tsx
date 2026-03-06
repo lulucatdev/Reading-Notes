@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { Note } from "@/lib/db";
+import type { Note, Like } from "@/lib/db";
 import type { User } from "@/lib/auth";
 
 interface Props {
@@ -33,68 +33,141 @@ function formatTime(dateStr: string): string {
   return d.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
 }
 
-// Ink background
-function useInkBackground() {
+// Grid paper background with dot-grid ripple effect
+function useGridBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: -1000, y: -1000 });
   const glowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    let width = 0, height = 0, animId = 0;
 
-    interface P { x: number; y: number; bx: number; by: number; s: number; a: number; d: number; p: number; }
-    let particles: P[] = [];
+    let width = 0, height = 0, animId = 0;
+    let mouseX = -1000, mouseY = -1000;
+    const dpr = window.devicePixelRatio || 1;
+
+    interface Dot { x: number; y: number; baseX: number; baseY: number; vx: number; vy: number; }
+    let dots: Dot[] = [];
+
+    const GRID = 28;
+    const DOT_R = 0.8;
+    const MOUSE_R = 160;
+    const CONNECT_R = 100;
+    const PUSH = 14;
+    const SPRING = 0.04;
 
     function resize() {
-      width = canvas!.width = window.innerWidth;
-      height = canvas!.height = window.innerHeight;
-      particles = [];
-      const count = Math.floor((width * height) / 9000);
-      for (let i = 0; i < count; i++) {
-        const x = Math.random() * width, y = Math.random() * height;
-        particles.push({ x, y, bx: x, by: y, s: Math.random() * 2 + 0.5, a: Math.random() * 0.08 + 0.03, d: Math.random() * 2 - 1, p: Math.random() * Math.PI * 2 });
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas!.width = width * dpr;
+      canvas!.height = height * dpr;
+      canvas!.style.width = width + "px";
+      canvas!.style.height = height + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dots = [];
+      const cols = Math.ceil(width / GRID) + 1;
+      const rows = Math.ceil(height / GRID) + 1;
+      const ox = (width - (cols - 1) * GRID) / 2;
+      const oy = (height - (rows - 1) * GRID) / 2;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x = ox + c * GRID, y = oy + r * GRID;
+          dots.push({ x, y, baseX: x, baseY: y, vx: 0, vy: 0 });
+        }
       }
     }
 
-    let t = 0;
     function animate() {
       ctx.clearRect(0, 0, width, height);
-      t += 0.008;
-      const mx = mouseRef.current.x, my = mouseRef.current.y, R = 200;
-      for (const p of particles) {
-        p.x = p.bx + Math.sin(t + p.p) * p.d * 15;
-        p.y = p.by + Math.cos(t * 0.7 + p.p) * p.d * 8;
-        const dx = p.x - mx, dy = p.y - my, dist = Math.sqrt(dx * dx + dy * dy);
-        let px = p.x, py = p.y, pa = p.a, ps = p.s;
-        if (dist < R) {
-          const f = 1 - dist / R, ang = Math.atan2(dy, dx);
-          px += Math.cos(ang) * f * 40;
-          py += Math.sin(ang) * f * 40;
-          pa += f * 0.2;
-          ps += f * 2;
+
+      // Draw grid lines (light)
+      ctx.strokeStyle = "rgba(190, 175, 145, 0.28)";
+      ctx.lineWidth = 0.5;
+      if (dots.length > 0) {
+        const cols = Math.ceil(width / GRID) + 1;
+        const rows = Math.ceil(height / GRID) + 1;
+        const ox = (width - (cols - 1) * GRID) / 2;
+        const oy = (height - (rows - 1) * GRID) / 2;
+        for (let c = 0; c < cols; c++) {
+          const x = ox + c * GRID;
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
         }
-        const edge = Math.min(px / 60, (width - px) / 60, py / 60, (height - py) / 60, 1);
+        for (let r = 0; r < rows; r++) {
+          const y = oy + r * GRID;
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+        }
+      }
+
+      // Update dots — mouse pushes, spring back
+      for (const dot of dots) {
+        const dx = dot.x - mouseX, dy = dot.y - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < MOUSE_R && dist > 0) {
+          const force = (1 - dist / MOUSE_R) * PUSH;
+          const ang = Math.atan2(dy, dx);
+          dot.vx += Math.cos(ang) * force * 0.06;
+          dot.vy += Math.sin(ang) * force * 0.06;
+        }
+        dot.vx += (dot.baseX - dot.x) * SPRING;
+        dot.vy += (dot.baseY - dot.y) * SPRING;
+        dot.vx *= 0.88;
+        dot.vy *= 0.88;
+        dot.x += dot.vx;
+        dot.y += dot.vy;
+      }
+
+      // Connection lines near mouse
+      for (let i = 0; i < dots.length; i++) {
+        const a = dots[i];
+        const dA = Math.sqrt((a.x - mouseX) ** 2 + (a.y - mouseY) ** 2);
+        if (dA > MOUSE_R * 1.5) continue;
+        for (let j = i + 1; j < dots.length; j++) {
+          const b = dots[j];
+          const dB = Math.sqrt((b.x - mouseX) ** 2 + (b.y - mouseY) ** 2);
+          if (dB > MOUSE_R * 1.5) continue;
+          const d = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+          if (d < CONNECT_R) {
+            const alpha = (1 - d / CONNECT_R) * 0.18 * Math.min(1, 1 - Math.max(dA, dB) / (MOUSE_R * 1.5));
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(243, 128, 32, ${alpha})`;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw dots
+      for (const dot of dots) {
+        const dx = dot.x - mouseX, dy = dot.y - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        let alpha = 0.15, radius = DOT_R, color = "180, 168, 140";
+        if (dist < MOUSE_R) {
+          const t = 1 - dist / MOUSE_R;
+          alpha = 0.15 + t * 0.65;
+          radius = DOT_R + t * 2;
+          const r = Math.round(180 + (243 - 180) * t);
+          const g = Math.round(168 + (128 - 168) * t);
+          const b = Math.round(140 + (32 - 140) * t);
+          color = `${r}, ${g}, ${b}`;
+        }
         ctx.beginPath();
-        ctx.arc(px, py, ps, 0, Math.PI * 2);
-        if (dist < R) {
-          const tt = 1 - dist / R;
-          ctx.fillStyle = `rgba(${Math.round(146 + 97 * tt)}, ${Math.round(155 - 27 * tt)}, ${Math.round(176 - 144 * tt)}, ${pa * edge})`;
-        } else {
-          ctx.fillStyle = `rgba(146, 155, 176, ${pa * edge})`;
-        }
+        ctx.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${color}, ${alpha})`;
         ctx.fill();
       }
+
       animId = requestAnimationFrame(animate);
     }
 
+    const glow = glowRef.current;
     const onMove = (e: MouseEvent) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
-      if (glowRef.current) { glowRef.current.style.left = e.clientX + "px"; glowRef.current.style.top = e.clientY + "px"; glowRef.current.classList.add("active"); }
+      mouseX = e.clientX; mouseY = e.clientY;
+      if (glow) { glow.style.left = e.clientX + "px"; glow.style.top = e.clientY + "px"; glow.classList.add("active"); }
     };
-    const onLeave = () => { mouseRef.current = { x: -1000, y: -1000 }; glowRef.current?.classList.remove("active"); };
+    const onLeave = () => { mouseX = -1000; mouseY = -1000; glow?.classList.remove("active"); };
 
     window.addEventListener("resize", resize);
     document.addEventListener("mousemove", onMove);
@@ -175,12 +248,70 @@ function QuickCapture({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-function NoteItem({ note, isAdmin, onDeleted }: { note: Note; isAdmin: boolean; onDeleted: () => void }) {
+function LikeButton({ note, user, onToggled }: { note: Note; user: User | null; onToggled: () => void }) {
+  const [likes, setLikes] = useState<Like[]>(note.likes);
+  const [animating, setAnimating] = useState(false);
+
+  useEffect(() => {
+    setLikes(note.likes);
+  }, [note.likes]);
+
+  const hasLiked = user ? likes.some((l) => l.github_id === user.github_id) : false;
+
+  const handleToggle = useCallback(async () => {
+    if (!user) return;
+    setAnimating(true);
+    setTimeout(() => setAnimating(false), 300);
+
+    // Optimistic update
+    if (hasLiked) {
+      setLikes((prev) => prev.filter((l) => l.github_id !== user.github_id));
+    } else {
+      setLikes((prev) => [...prev, { github_id: user.github_id, github_login: user.github_login }]);
+    }
+
+    await fetch(`/api/notes/${note.id}/like`, { method: "POST" });
+    onToggled();
+  }, [note.id, user, hasLiked, onToggled]);
+
+  return (
+    <div className="like-section">
+      <button
+        className={`like-btn ${hasLiked ? "liked" : ""} ${animating ? "like-pop" : ""}`}
+        onClick={handleToggle}
+        disabled={!user}
+        title={user ? (hasLiked ? "Unlike" : "Like") : "Login to like"}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill={hasLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        </svg>
+        {likes.length > 0 && <span className="like-count">{likes.length}</span>}
+      </button>
+      {likes.length > 0 && (
+        <div className="like-avatars">
+          {likes.map((l) => (
+            <img
+              key={l.github_id}
+              className="like-avatar"
+              src={`https://avatars.githubusercontent.com/u/${l.github_id}?s=32`}
+              alt={l.github_login}
+              title={l.github_login}
+              width={20}
+              height={20}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NoteItem({ note, isAdmin, user, onChanged }: { note: Note; isAdmin: boolean; user: User | null; onChanged: () => void }) {
   const handleDelete = useCallback(async () => {
     if (!confirm("Delete this note?")) return;
     await fetch(`/api/notes/${note.id}`, { method: "DELETE" });
-    onDeleted();
-  }, [note.id, onDeleted]);
+    onChanged();
+  }, [note.id, onChanged]);
 
   return (
     <div className="note-item">
@@ -199,6 +330,7 @@ function NoteItem({ note, isAdmin, onDeleted }: { note: Note; isAdmin: boolean; 
       )}
       <div className="note-meta">
         <span className="note-time">{formatTime(note.created_at)}</span>
+        <LikeButton note={note} user={user} onToggled={onChanged} />
         {isAdmin && (
           <button className="note-delete" onClick={handleDelete}>delete</button>
         )}
@@ -219,7 +351,7 @@ export function SiteFooter() {
               <span className="footer-brand-name">Zihui Chen</span>
             </div>
             <p className="footer-brand-desc">
-              Independent Researcher & Builder.
+              All about tech and finance.
             </p>
           </div>
           <div>
@@ -247,7 +379,7 @@ export function SiteFooter() {
 }
 
 export default function HomePage({ notes: initialNotes, user }: Props) {
-  const { canvasRef, glowRef } = useInkBackground();
+  const { canvasRef, glowRef } = useGridBackground();
   const [notes, setNotes] = useState(initialNotes);
 
   const refresh = useCallback(async () => {
@@ -308,7 +440,8 @@ export default function HomePage({ notes: initialNotes, user }: Props) {
                 key={note.id}
                 note={note}
                 isAdmin={user?.isAdmin ?? false}
-                onDeleted={refresh}
+                user={user}
+                onChanged={refresh}
               />
             ))
           )}
