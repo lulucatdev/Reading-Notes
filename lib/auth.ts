@@ -1,7 +1,7 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { getSession } from "./db";
 
-const ADMIN_GITHUB_LOGIN = "chenzihui222";
+const ADMIN_GITHUB_LOGINS = ["chenzihui222", "lulucatdev"];
 const SESSION_COOKIE = "zn_session";
 
 export interface User {
@@ -29,7 +29,7 @@ export async function getCurrentUser(
   return {
     github_id: session.github_id,
     github_login: session.github_login,
-    isAdmin: session.github_login === ADMIN_GITHUB_LOGIN,
+    isAdmin: ADMIN_GITHUB_LOGINS.includes(session.github_login),
   };
 }
 

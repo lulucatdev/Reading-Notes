@@ -5,6 +5,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Note } from "@/lib/db";
 import type { User } from "@/lib/auth";
+import { SiteFooter } from "../../home";
 
 interface Props {
   note: Note;
@@ -27,13 +28,14 @@ export default function NoteDetail({ note, user }: Props) {
       <div className="app">
         <div className="note-detail">
           <a href="/" className="back-link">
-            &larr; Back
+            &larr; Back to Notes
           </a>
 
           <div className="note-detail-header">
             <h1 className="note-detail-title">{note.title}</h1>
             <div className="note-detail-meta">
               <span>{note.author || "Unknown"}</span>
+              <span>&middot;</span>
               <span>{note.created_at.slice(0, 10)}</span>
             </div>
           </div>
@@ -59,9 +61,9 @@ export default function NoteDetail({ note, user }: Props) {
             </div>
           )}
         </div>
-
-        <footer className="footer">Zihui Notes &middot; Built with vinext</footer>
       </div>
+
+      <SiteFooter />
     </>
   );
 }

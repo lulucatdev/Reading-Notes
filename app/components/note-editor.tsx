@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { SiteFooter } from "../home";
 
 interface Props {
   initialNote?: {
@@ -267,8 +268,9 @@ export default function NoteEditor({ initialNote }: Props) {
           </div>
         </div>
 
-        <footer className="footer">Zihui Notes &middot; Built with vinext</footer>
       </div>
+
+      <SiteFooter />
     </>
   );
 }
