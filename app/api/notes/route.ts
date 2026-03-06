@@ -17,21 +17,17 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as {
-    title: string;
-    author: string;
     content: string;
-    cover_url: string;
+    reference: string;
   };
 
-  if (!body.title || !body.content) {
-    return Response.json({ error: "Title and content required" }, { status: 400 });
+  if (!body.content?.trim()) {
+    return Response.json({ error: "Content required" }, { status: 400 });
   }
 
   const id = await createNote(DB, {
-    title: body.title,
-    author: body.author || "",
-    content: body.content,
-    cover_url: body.cover_url || "",
+    content: body.content.trim(),
+    reference: body.reference?.trim() || "",
   });
 
   return Response.json({ id });

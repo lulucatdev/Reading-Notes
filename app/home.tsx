@@ -1,24 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { Note, Recommendation } from "@/lib/db";
+import { useState, useCallback, useEffect, useRef } from "react";
+import type { Note } from "@/lib/db";
 import type { User } from "@/lib/auth";
 
 interface Props {
   notes: Note[];
-  recommendations: Recommendation[];
   user: User | null;
-}
-
-function stripMarkdown(md: string): string {
-  return md
-    .replace(/[#*_`~\[\]()>!-]/g, "")
-    .replace(/\n+/g, " ")
-    .trim();
-}
-
-function formatDate(date: string): string {
-  return date.slice(0, 10);
 }
 
 const GITHUB_SVG = (
@@ -27,7 +15,25 @@ const GITHUB_SVG = (
   </svg>
 );
 
-// Flowing ink particles background
+function isUrl(str: string): boolean {
+  return /^https?:\/\//i.test(str.trim());
+}
+
+function formatTime(dateStr: string): string {
+  const d = new Date(dateStr + "Z");
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return d.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
+}
+
+// Ink background
 function useInkBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
@@ -37,175 +43,171 @@ function useInkBackground() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
+    let width = 0, height = 0, animId = 0;
 
-    let width = 0;
-    let height = 0;
-    let animId = 0;
-
-    interface Particle {
-      x: number;
-      y: number;
-      baseX: number;
-      baseY: number;
-      size: number;
-      alpha: number;
-      drift: number;
-      phase: number;
-      speed: number;
-    }
-
-    let particles: Particle[] = [];
+    interface P { x: number; y: number; bx: number; by: number; s: number; a: number; d: number; p: number; }
+    let particles: P[] = [];
 
     function resize() {
       width = canvas!.width = window.innerWidth;
       height = canvas!.height = window.innerHeight;
-      initParticles();
-    }
-
-    function initParticles() {
       particles = [];
-      const count = Math.floor((width * height) / 8000);
+      const count = Math.floor((width * height) / 9000);
       for (let i = 0; i < count; i++) {
-        const x = Math.random() * width;
-        const y = Math.random() * height;
-        particles.push({
-          x,
-          y,
-          baseX: x,
-          baseY: y,
-          size: Math.random() * 2 + 0.5,
-          alpha: Math.random() * 0.08 + 0.03,
-          drift: Math.random() * 2 - 1,
-          phase: Math.random() * Math.PI * 2,
-          speed: Math.random() * 0.3 + 0.1,
-        });
+        const x = Math.random() * width, y = Math.random() * height;
+        particles.push({ x, y, bx: x, by: y, s: Math.random() * 2 + 0.5, a: Math.random() * 0.08 + 0.03, d: Math.random() * 2 - 1, p: Math.random() * Math.PI * 2 });
       }
     }
 
-    let time = 0;
-
+    let t = 0;
     function animate() {
       ctx.clearRect(0, 0, width, height);
-      time += 0.008;
-
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
-      const MOUSE_RADIUS = 200;
-
+      t += 0.008;
+      const mx = mouseRef.current.x, my = mouseRef.current.y, R = 200;
       for (const p of particles) {
-        // Gentle organic drift
-        p.x = p.baseX + Math.sin(time + p.phase) * p.drift * 15;
-        p.y = p.baseY + Math.cos(time * 0.7 + p.phase) * p.drift * 8;
-
-        // Mouse interaction — particles flow away like ink disturbed by a brush
-        const dx = p.x - mx;
-        const dy = p.y - my;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        let drawX = p.x;
-        let drawY = p.y;
-        let drawAlpha = p.alpha;
-        let drawSize = p.size;
-
-        if (dist < MOUSE_RADIUS) {
-          const force = (1 - dist / MOUSE_RADIUS);
-          const angle = Math.atan2(dy, dx);
-          drawX += Math.cos(angle) * force * 40;
-          drawY += Math.sin(angle) * force * 40;
-          drawAlpha = p.alpha + force * 0.2;
-          drawSize = p.size + force * 2;
-
-          // Draw connection lines between nearby disturbed particles
-          if (force > 0.3) {
-            for (const q of particles) {
-              if (q === p) continue;
-              const qdx = q.x - mx;
-              const qdy = q.y - my;
-              const qdist = Math.sqrt(qdx * qdx + qdy * qdy);
-              if (qdist < MOUSE_RADIUS) {
-                const d = Math.sqrt((drawX - q.x) ** 2 + (drawY - q.y) ** 2);
-                if (d < 80) {
-                  const lineAlpha = (1 - d / 80) * force * 0.1;
-                  ctx.beginPath();
-                  ctx.moveTo(drawX, drawY);
-                  ctx.lineTo(q.x, q.y);
-                  ctx.strokeStyle = `rgba(243, 128, 32, ${lineAlpha})`;
-                  ctx.lineWidth = 0.5;
-                  ctx.stroke();
-                }
-              }
-            }
-          }
+        p.x = p.bx + Math.sin(t + p.p) * p.d * 15;
+        p.y = p.by + Math.cos(t * 0.7 + p.p) * p.d * 8;
+        const dx = p.x - mx, dy = p.y - my, dist = Math.sqrt(dx * dx + dy * dy);
+        let px = p.x, py = p.y, pa = p.a, ps = p.s;
+        if (dist < R) {
+          const f = 1 - dist / R, ang = Math.atan2(dy, dx);
+          px += Math.cos(ang) * f * 40;
+          py += Math.sin(ang) * f * 40;
+          pa += f * 0.2;
+          ps += f * 2;
         }
-
-        // Fade edges
-        const edgeFade = Math.min(
-          drawX / 60, (width - drawX) / 60,
-          drawY / 60, (height - drawY) / 60,
-          1
-        );
-
+        const edge = Math.min(px / 60, (width - px) / 60, py / 60, (height - py) / 60, 1);
         ctx.beginPath();
-        ctx.arc(drawX, drawY, drawSize, 0, Math.PI * 2);
-
-        // Color blend: gray default, orange near mouse
-        if (dist < MOUSE_RADIUS) {
-          const t = 1 - dist / MOUSE_RADIUS;
-          const r = Math.round(146 + (243 - 146) * t);
-          const g = Math.round(155 + (128 - 155) * t);
-          const b = Math.round(176 + (32 - 176) * t);
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${drawAlpha * edgeFade})`;
+        ctx.arc(px, py, ps, 0, Math.PI * 2);
+        if (dist < R) {
+          const tt = 1 - dist / R;
+          ctx.fillStyle = `rgba(${Math.round(146 + 97 * tt)}, ${Math.round(155 - 27 * tt)}, ${Math.round(176 - 144 * tt)}, ${pa * edge})`;
         } else {
-          ctx.fillStyle = `rgba(146, 155, 176, ${drawAlpha * edgeFade})`;
+          ctx.fillStyle = `rgba(146, 155, 176, ${pa * edge})`;
         }
         ctx.fill();
       }
-
       animId = requestAnimationFrame(animate);
     }
 
-    const handleMouse = (e: MouseEvent) => {
+    const onMove = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
-      if (glowRef.current) {
-        glowRef.current.style.left = e.clientX + "px";
-        glowRef.current.style.top = e.clientY + "px";
-        glowRef.current.classList.add("active");
-      }
+      if (glowRef.current) { glowRef.current.style.left = e.clientX + "px"; glowRef.current.style.top = e.clientY + "px"; glowRef.current.classList.add("active"); }
     };
-
-    const handleLeave = () => {
-      mouseRef.current = { x: -1000, y: -1000 };
-      glowRef.current?.classList.remove("active");
-    };
+    const onLeave = () => { mouseRef.current = { x: -1000, y: -1000 }; glowRef.current?.classList.remove("active"); };
 
     window.addEventListener("resize", resize);
-    document.addEventListener("mousemove", handleMouse);
-    document.addEventListener("mouseleave", handleLeave);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseleave", onLeave);
     resize();
     animate();
-
-    // Scroll reveal
-    const observer = new IntersectionObserver(
-      (entries) => entries.forEach((e) => {
-        if (e.isIntersecting) e.target.classList.add("visible");
-      }),
-      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
-    );
-    document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener("resize", resize);
-      document.removeEventListener("mousemove", handleMouse);
-      document.removeEventListener("mouseleave", handleLeave);
-      observer.disconnect();
-    };
+    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", resize); document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseleave", onLeave); };
   }, []);
 
   return { canvasRef, glowRef };
 }
 
-function SiteFooter() {
+function QuickCapture({ onSaved }: { onSaved: () => void }) {
+  const [content, setContent] = useState("");
+  const [reference, setReference] = useState("");
+  const [saving, setSaving] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSave = useCallback(async () => {
+    if (!content.trim()) return;
+    setSaving(true);
+    try {
+      await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: content.trim(), reference: reference.trim() }),
+      });
+      setContent("");
+      setReference("");
+      onSaved();
+    } catch {
+      alert("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }, [content, reference, onSaved]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        handleSave();
+      }
+    },
+    [handleSave]
+  );
+
+  return (
+    <div className="capture-box">
+      <textarea
+        ref={textareaRef}
+        className="capture-textarea"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="What did you learn today?"
+        rows={3}
+      />
+      <div className="capture-bottom">
+        <input
+          className="capture-ref"
+          type="text"
+          value={reference}
+          onChange={(e) => setReference(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Reference — URL or source text (optional)"
+        />
+        <button
+          className="btn btn-accent"
+          onClick={handleSave}
+          disabled={saving || !content.trim()}
+        >
+          {saving ? "Saving..." : "Save"}
+          <span className="capture-shortcut">⌘↵</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NoteItem({ note, isAdmin, onDeleted }: { note: Note; isAdmin: boolean; onDeleted: () => void }) {
+  const handleDelete = useCallback(async () => {
+    if (!confirm("Delete this note?")) return;
+    await fetch(`/api/notes/${note.id}`, { method: "DELETE" });
+    onDeleted();
+  }, [note.id, onDeleted]);
+
+  return (
+    <div className="note-item">
+      <div className="note-content">{note.content}</div>
+      {note.reference && (
+        <div className="note-ref">
+          {isUrl(note.reference) ? (
+            <a href={note.reference} target="_blank" rel="noopener noreferrer" className="note-ref-link">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              {note.reference.replace(/^https?:\/\//, "").split("/")[0]}
+            </a>
+          ) : (
+            <span className="note-ref-text">— {note.reference}</span>
+          )}
+        </div>
+      )}
+      <div className="note-meta">
+        <span className="note-time">{formatTime(note.created_at)}</span>
+        {isAdmin && (
+          <button className="note-delete" onClick={handleDelete}>delete</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function SiteFooter() {
   const year = new Date().getFullYear();
   return (
     <footer className="site-footer">
@@ -217,62 +219,42 @@ function SiteFooter() {
               <span className="footer-brand-name">Zihui Chen</span>
             </div>
             <p className="footer-brand-desc">
-              Independent Researcher & Builder. Exploring technology, venture capital, and building tools that matter.
+              Independent Researcher & Builder.
             </p>
           </div>
-
           <div>
             <div className="footer-heading">Projects</div>
             <div className="footer-links">
               <a href="https://zihuichen.com" target="_blank" rel="noopener noreferrer" className="footer-link">Homepage</a>
               <a href="https://vc.zihuichen.com" target="_blank" rel="noopener noreferrer" className="footer-link">VC Radar</a>
-              <a href="https://notes.zihuichen.com" className="footer-link">Reading Notes</a>
+              <a href="https://notes.zihuichen.com" className="footer-link">Notes</a>
             </div>
           </div>
-
           <div>
             <div className="footer-heading">Links</div>
             <div className="footer-links">
               <a href="https://github.com/chenzihui222" target="_blank" rel="noopener noreferrer" className="footer-link">GitHub</a>
-              <a href="https://github.com/chenzihui222/Reading-Notes" target="_blank" rel="noopener noreferrer" className="footer-link">Source Code</a>
-            </div>
-          </div>
-
-          <div>
-            <div className="footer-heading">Tech Stack</div>
-            <div className="footer-links">
-              <span className="footer-link" style={{ cursor: "default" }}>vinext + React</span>
-              <span className="footer-link" style={{ cursor: "default" }}>Cloudflare Workers</span>
-              <span className="footer-link" style={{ cursor: "default" }}>D1 + R2</span>
             </div>
           </div>
         </div>
-
         <div className="footer-bottom">
-          <span className="footer-copy">&copy; {year} Zihui Chen. All rights reserved.</span>
-          <div className="footer-socials">
-            <a
-              href="https://github.com/chenzihui222"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-social"
-            >
-              {GITHUB_SVG}
-            </a>
-          </div>
+          <span className="footer-copy">&copy; {year} Zihui Chen</span>
+          <a href="https://github.com/chenzihui222" target="_blank" rel="noopener noreferrer" className="footer-social">{GITHUB_SVG}</a>
         </div>
       </div>
     </footer>
   );
 }
 
-export default function HomePage({ notes, recommendations, user }: Props) {
+export default function HomePage({ notes: initialNotes, user }: Props) {
   const { canvasRef, glowRef } = useInkBackground();
+  const [notes, setNotes] = useState(initialNotes);
 
-  const parsedRecs = recommendations.map((r) => ({
-    ...r,
-    parsedTags: JSON.parse(r.tags || "[]") as string[],
-  }));
+  const refresh = useCallback(async () => {
+    const res = await fetch("/api/notes");
+    const data = (await res.json()) as { notes: Note[] };
+    setNotes(data.notes);
+  }, []);
 
   return (
     <>
@@ -281,7 +263,6 @@ export default function HomePage({ notes, recommendations, user }: Props) {
       <div id="mouse-glow" ref={glowRef} />
 
       <div className="app">
-        {/* Nav */}
         <nav className="nav anim-fade-up">
           <a href="/" className="nav-brand">
             <span className="nav-dot" />
@@ -292,9 +273,6 @@ export default function HomePage({ notes, recommendations, user }: Props) {
             <a href="https://vc.zihuichen.com" target="_blank" rel="noopener noreferrer" className="nav-link">VC Radar</a>
           </div>
           <div className="nav-actions">
-            {user?.isAdmin && (
-              <a href="/write" className="btn btn-accent">+ Write</a>
-            )}
             {user ? (
               <form action="/api/auth/logout" method="POST" style={{ display: "inline" }}>
                 <button type="submit" className="btn btn-ghost">
@@ -311,122 +289,33 @@ export default function HomePage({ notes, recommendations, user }: Props) {
           </div>
         </nav>
 
-        {/* Hero */}
-        <div className="hero">
+        {/* Quick capture for admins */}
+        {user?.isAdmin && (
           <div className="anim-fade-up anim-stagger-1">
-            <span className="hero-label">reading notes & book recommendations</span>
+            <QuickCapture onSaved={refresh} />
           </div>
-          <h1 className="anim-fade-up anim-stagger-2">
-            Reading Notes<span className="accent-dot">.</span>
-          </h1>
-          <p className="hero-desc anim-fade-up anim-stagger-3">
-            A personal collection of reading notes, thoughts, and curated book recommendations across literature, technology, and finance.
-          </p>
-          <div className="hero-stats anim-fade-up anim-stagger-4">
-            <div className="stat-chip">
-              <span className="stat-dot" style={{ background: "#f38020" }} />
-              {notes.length} Notes
-            </div>
-            <div className="stat-chip">
-              <span className="stat-dot" style={{ background: "#059669" }} />
-              {recommendations.length} Recommendations
-            </div>
-            <div className="stat-chip">
-              <span className="stat-dot" style={{ background: "#2563eb" }} />
-              3 Categories
-            </div>
-          </div>
-        </div>
+        )}
 
-        {/* Notes Section */}
-        <div className="reveal">
-          <div className="section-header">
-            <span className="section-line" />
-            <span className="section-label">Notes</span>
-          </div>
-          <h2 className="section-title">
-            Reading Notes<span style={{ color: "var(--accent)" }}>.</span>
-          </h2>
-          <p className="section-desc">
-            {notes.length > 0 ? `${notes.length} notes collected` : "No notes yet — check back soon."}
-          </p>
-        </div>
-
-        {notes.length === 0 ? (
-          <div className="empty-state">
-            <h3>No notes yet</h3>
-            <p>
-              {user?.isAdmin
-                ? 'Click "+ Write" to create your first note.'
-                : "Check back later for reading notes."}
-            </p>
-          </div>
-        ) : (
-          <div className="notes-grid">
-            {notes.map((note, i) => (
-              <a
+        {/* Notes feed */}
+        <div className="notes-feed anim-fade-up anim-stagger-2">
+          {notes.length === 0 ? (
+            <div className="empty-state">
+              <p>No notes yet.</p>
+            </div>
+          ) : (
+            notes.map((note) => (
+              <NoteItem
                 key={note.id}
-                href={`/note/${note.id}`}
-                style={{ textDecoration: "none", color: "inherit" }}
-                className="reveal"
-              >
-                <div className="note-card" style={{ transitionDelay: `${i * 0.05}s` }}>
-                  {note.cover_url && (
-                    <div
-                      className="note-card-cover"
-                      style={{ backgroundImage: `url(${note.cover_url})` }}
-                    />
-                  )}
-                  <div className="note-card-body">
-                    <div className="note-card-title">{note.title}</div>
-                    <div className="note-card-author">{note.author || "Unknown"}</div>
-                    <div className="note-card-excerpt">
-                      {stripMarkdown(note.content).slice(0, 120)}...
-                    </div>
-                    <div className="note-card-date">{formatDate(note.created_at)}</div>
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* Recommendations */}
-        {parsedRecs.length > 0 && (
-          <div className="reveal">
-            <div className="section-header">
-              <span className="section-line" />
-              <span className="section-label">Library</span>
-            </div>
-            <h2 className="section-title">
-              Recommended Reading<span style={{ color: "var(--accent)" }}>.</span>
-            </h2>
-            <p className="section-desc">
-              Curated book recommendations across literature, tech, and finance
-            </p>
-
-            <div className="rec-grid" style={{ marginTop: 20 }}>
-              {parsedRecs.slice(0, 12).map((rec) => (
-                <div key={rec.id} className="rec-card">
-                  <div className="rec-card-category">{rec.category}</div>
-                  <div className="rec-card-title">{rec.title}</div>
-                  <div className="rec-card-author">{rec.author}</div>
-                  <div className="rec-card-desc">{rec.description}</div>
-                  <div className="rec-tags">
-                    {rec.parsedTags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="rec-tag">{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                note={note}
+                isAdmin={user?.isAdmin ?? false}
+                onDeleted={refresh}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       <SiteFooter />
     </>
   );
 }
-
-export { SiteFooter };
